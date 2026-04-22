@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据集开放 API · 一期原型</title>
+<style>
+:root {
+  --primary: #4F6EF7;
+  --primary-light: #EEF1FE;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --gray-50: #f8f9fa;
+  --gray-100: #f1f3f5;
+  --gray-200: #e9ecef;
+  --gray-400: #adb5bd;
+  --gray-600: #6c757d;
+  --gray-800: #343a40;
+  --sidebar-bg: #1a2035;
+  --sidebar-text: #8b9dc3;
+  --sidebar-active: #ffffff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size:13px; background:#f0f2f5; color:#1a1a1a; display:flex; flex-direction:column; height:100vh; }
+
+.page-nav { background:#2c3e50; display:flex; gap:2px; padding:8px 12px 0; flex-shrink:0; overflow-x:auto; }
+.page-nav button { padding:7px 16px; border:none; border-radius:6px 6px 0 0; cursor:pointer; font-size:12px; font-weight:500; background:#3d5166; color:#adb5bd; transition:all .15s; white-space:nowrap; }
+.page-nav button.active { background:#f0f2f5; color:#1a2035; font-weight:600; }
+.page-nav button:hover:not(.active) { background:#4a6080; color:#fff; }
+.page-nav .phase-badge { background:#22c55e; color:#fff; border-radius:3px; padding:1px 5px; font-size:10px; margin-left:4px; }
+
+.shell { display:flex; flex:1; overflow:hidden; }
+.sidebar { width:160px; background:var(--sidebar-bg); flex-shrink:0; display:flex; flex-direction:column; overflow-y:auto; }
+.sidebar-logo { padding:16px 12px; border-bottom:1px solid #2d3a52; }
+.sidebar-logo .logo-text { font-size:14px; font-weight:700; color:#fff; }
+.sidebar-logo .logo-sub { font-size:11px; color:var(--sidebar-text); margin-top:2px; }
+.nav-group { padding:10px 0 4px; }
+.nav-group-title { padding:0 12px 6px; font-size:10px; color:#4a5a7a; text-transform:uppercase; letter-spacing:.8px; font-weight:600; }
+.nav-item { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; color:var(--sidebar-text); transition:all .15s; font-size:12px; }
+.nav-item:hover { background:#243050; color:#c8d0e7; }
+.nav-item.active { background:#3a4f70; color:var(--sidebar-active); font-weight:500; border-left:3px solid var(--primary); }
+.nav-item .new-badge { background:#22c55e; color:#fff; border-radius:3px; padding:0 4px; font-size:9px; margin-left:auto; }
+
+.main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.topbar { background:#fff; padding:0 20px; height:48px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--gray-200); flex-shrink:0; }
+.breadcrumb { display:flex; align-items:center; gap:6px; color:var(--gray-600); font-size:12px; }
+.breadcrumb span:last-child { color:var(--gray-800); font-weight:500; }
+.breadcrumb .sep { color:var(--gray-400); }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.avatar { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#4F6EF7,#9b59b6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+.content { flex:1; overflow-y:auto; padding:16px 20px; }
+.page { display:none; }
+.page.active { display:block; }
+
+.toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.toolbar-left { display:flex; align-items:center; gap:8px; flex:1; flex-wrap:wrap; }
+.toolbar-right { display:flex; align-items:center; gap:8px; }
+.page-title { font-size:15px; font-weight:600; color:var(--gray-800); margin-bottom:14px; }
+
+.input-sm { height:30px; padding:0 10px; border:1px solid var(--gray-200); border-radius:5px; font-size:12px; color:var(--gray-800); background:#fff; outline:none; min-width:120px; }
+.input-sm:focus { border-color:var(--primary); }
+.select-sm { height:30px; padding:0 8px; border:1px solid var(--gray-200); border-radius:5px; font-size:12px; color:var(--gray-800); background:#fff; cursor:pointer; }
+
+.btn { height:30px; padding:0 14px; border-radius:5px; border:none; cursor:pointer; font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover { background:#3d5ce5; }
+.btn-default { background:#fff; color:var(--gray-800); border:1px solid var(--gray-200); }
+.btn-default:hover { background:var(--gray-50); }
+.btn-danger { background:#fff; color:var(--danger); border:1px solid var(--danger); }
+.btn-danger:hover { background:#fef2f2; }
+.btn-sm { height:26px; padding:0 10px; font-size:11px; }
+.btn-success { background:var(--success); color:#fff; }
+
+.table-wrap { background:#fff; border-radius:8px; border:1px solid var(--gray-200); overflow:hidden; }
+table { width:100%; border-collapse:collapse; }
+th { background:#fafafa; padding:10px 12px; text-align:left; font-size:12px; color:var(--gray-600); font-weight:500; border-bottom:1px solid var(--gray-200); white-space:nowrap; }
+td { padding:10px 12px; font-size:12px; color:var(--gray-800); border-bottom:1px solid #f5f5f5; vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#fafbff; }
+.table-footer { padding:10px 14px; display:flex; align-items:center; justify-content:space-between; background:#fff; border-top:1px solid var(--gray-200); }
+.table-footer span { font-size:12px; color:var(--gray-600); }
+.pagination { display:flex; gap:4px; }
+.pagination button { width:26px; height:26px; border:1px solid var(--gray-200); background:#fff; border-radius:4px; cursor:pointer; font-size:12px; }
+.pagination button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+.tag { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; }
+.tag-success { background:#dcfce7; color:#16a34a; }
+.tag-warning { background:#fef9c3; color:#ca8a04; }
+.tag-danger { background:#fee2e2; color:#dc2626; }
+.tag-info { background:#dbeafe; color:#2563eb; }
+.tag-gray { background:#f3f4f6; color:#6b7280; }
+.dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+.op-links { display:flex; gap:2px; align-items:center; }
+.op-link { color:var(--primary); cursor:pointer; padding:2px 6px; border-radius:3px; font-size:12px; }
+.op-link:hover { background:var(--primary-light); }
+.op-link.danger { color:var(--danger); }
+.op-link.danger:hover { background:#fee2e2; }
+.op-sep { color:var(--gray-200); }
+
+.sql-preview { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--primary); cursor:pointer; font-family:monospace; font-size:11px; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:#fff; border-radius:10px; width:520px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; }
+.modal-title { font-size:14px; font-weight:600; }
+.modal-close { background:none; border:none; cursor:pointer; color:var(--gray-400); font-size:18px; line-height:1; }
+.modal-body { padding:20px; }
+.modal-footer { padding:14px 20px; border-top:1px solid var(--gray-200); display:flex; justify-content:flex-end; gap:8px; }
+
+.form-row { margin-bottom:14px; }
+.form-label { display:block; font-size:12px; font-weight:500; color:var(--gray-800); margin-bottom:5px; }
+.form-label .req { color:var(--danger); margin-left:2px; }
+.form-label .tip { color:var(--gray-600); font-weight:400; font-size:11px; margin-left:4px; }
+.form-input { width:100%; height:32px; padding:0 10px; border:1px solid var(--gray-200); border-radius:5px; font-size:12px; color:var(--gray-800); }
+.form-input:focus { border-color:var(--primary); outline:none; }
+.form-textarea { width:100%; padding:8px 10px; border:1px solid var(--gray-200); border-radius:5px; font-size:12px; color:var(--gray-800); resize:vertical; min-height:72px; }
+.form-textarea:focus { border-color:var(--primary); outline:none; }
+.form-select { width:100%; height:32px; padding:0 10px; border:1px solid var(--gray-200); border-radius:5px; font-size:12px; color:var(--gray-800); }
+.form-hint { font-size:11px; color:var(--gray-600); margin-top:4px; }
+.form-row-inline { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+
+.toggle { width:32px; height:18px; background:var(--gray-200); border-radius:9px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+.toggle.on { background:var(--primary); }
+.toggle::after { content:''; position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; top:2px; left:2px; transition:left .2s; }
+.toggle.on::after { left:16px; }
+
+.token-display { background:#1a2035; border-radius:6px; padding:10px 14px; font-family:monospace; font-size:12px; color:#7dd3fc; letter-spacing:.5px; display:flex; align-items:center; justify-content:space-between; margin-top:4px; word-break:break-all; }
+.token-display .copy-btn { color:#4F6EF7; cursor:pointer; font-size:11px; font-family:sans-serif; flex-shrink:0; margin-left:8px; }
+
+.stat-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.stat-card { background:#fff; border-radius:8px; border:1px solid var(--gray-200); padding:14px 16px; }
+.stat-card .s-label { font-size:12px; color:var(--gray-600); margin-bottom:6px; }
+.stat-card .s-value { font-size:22px; font-weight:700; color:var(--gray-800); }
+.stat-card .s-sub { font-size:11px; color:var(--gray-400); margin-top:3px; }
+.stat-card .s-value.blue { color:var(--primary); }
+.stat-card .s-value.green { color:var(--success); }
+.stat-card .s-value.red { color:var(--danger); }
+
+.progress-bar { height:5px; background:var(--gray-200); border-radius:3px; overflow:hidden; margin-top:4px; }
+.progress-fill { height:100%; background:var(--primary); border-radius:3px; }
+
+.toast { position:fixed; top:60px; right:24px; background:#1a2035; color:#fff; padding:10px 18px; border-radius:7px; font-size:13px; z-index:999; display:none; box-shadow:0 4px 16px rgba(0,0,0,.3); }
+.toast.show { display:flex; align-items:center; gap:8px; }
+
+/* 调用日志 */
+.log-filter { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.log-status-ok { color:#16a34a; font-weight:600; }
+.log-status-err { color:#dc2626; font-weight:600; }
+.log-status-limit { color:#ca8a04; font-weight:600; }
+code { font-size:11px; color:var(--primary); background:var(--primary-light); padding:1px 5px; border-radius:3px; font-family:monospace; }
+
+/* API 文档 */
+.doc-section { background:#fff; border-radius:8px; border:1px solid var(--gray-200); padding:20px; margin-bottom:14px; }
+.doc-section h3 { font-size:13px; font-weight:700; color:var(--gray-800); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--gray-200); }
+.doc-section h4 { font-size:12px; font-weight:600; color:var(--gray-800); margin:12px 0 6px; }
+.code-block { background:#1a2035; border-radius:6px; padding:14px; font-family:monospace; font-size:12px; color:#e2e8f0; line-height:1.8; overflow-x:auto; }
+.code-block .kw { color:#f1fa8c; }
+.code-block .str { color:#50fa7b; }
+.code-block .cm { color:#6272a4; }
+.code-block .hd { color:#ff79c6; }
+.code-block .nu { color:#bd93f9; }
+.err-table td:first-child { font-family:monospace; font-weight:600; }
+.err-200 { color:#16a34a; }
+.err-401 { color:#dc2626; }
+.err-403 { color:#dc2626; }
+.err-429 { color:#ca8a04; }
+.err-500 { color:#7c3aed; }
+
+/* 新建数据集表单 */
+.section-block { background:#fff; border-radius:8px; border:1px solid var(--gray-200); padding:20px; margin-bottom:14px; }
+.section-title { font-size:13px; font-weight:600; color:var(--gray-800); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; }
+
+/* Key 管理 弹窗生成Key */
+.key-gen-block { background:#f8faff; border:1px dashed var(--primary); border-radius:8px; padding:16px; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- 页面导航 -->
+<div class="page-nav">
+  <button class="active" onclick="showPage('list')">① 数据集列表</button>
+  <button onclick="showPage('create')">② 新建数据集</button>
+  <button onclick="showPage('key-manage')">③ Key 管理 <span class="phase-badge">管理员</span></button>
+  <button onclick="showPage('call-log')">④ 调用日志</button>
+  <button onclick="showPage('api-doc')">⑤ API 文档</button>
+</div>
+
+<div class="shell">
+<!-- 侧边栏 -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">数据查询平台</div>
+    <div class="logo-sub">dbmanage.987ht.net</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">查询</div>
+    <div class="nav-item"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>查询系统</div>
+    <div class="nav-item"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>算法平台</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">BI</div>
+    <div class="nav-item active"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>数据集列表</div>
+    <div class="nav-item" style="padding-left:24px;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10H7"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M21 18H7"/></svg>图表列表</div>
+    <div class="nav-item" style="padding-left:24px;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>仪表盘列表</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">对外开放</div>
+    <div class="nav-item" style="color:#7dd3fc;" onclick="showPage('key-manage')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Key 管理 <span class="new-badge">一期</span></div>
+    <div class="nav-item" style="color:#7dd3fc;" onclick="showPage('call-log')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77"/></svg>调用日志 <span class="new-badge">一期</span></div>
+    <div class="nav-item" style="color:#7dd3fc;" onclick="showPage('api-doc')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>API 文档 <span class="new-badge">一期</span></div>
+  </div>
+</div>
+
+<div class="main">
+<div class="topbar">
+  <div class="breadcrumb">
+    <span>首页</span><span class="sep">›</span><span id="topbar-title">数据集列表</span>
+  </div>
+  <div class="topbar-right">
+    <span style="font-size:12px;color:var(--gray-600);">帮助中心</span>
+    <div class="avatar">云</div>
+  </div>
+</div>
+<div class="content">
+
+<!-- ========== PAGE 1: 数据集列表 ========== -->
+<div id="page-list" class="page active">
+  <div class="page-title">数据集列表</div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input class="input-sm" placeholder="请输入名称" style="width:130px;">
+      <select class="select-sm"><option>请选择项目</option><option>财务报表</option><option>欢乐游戏人</option><option>迷雾三国</option></select>
+      <input class="input-sm" placeholder="创建人" style="width:100px;">
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-primary" onclick="showPage('create')">＋ 新增数据集</button>
+      <button class="btn btn-default">↺ 重置</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>名称</th><th>SQL</th><th>所属项目</th><th>连接源</th><th>创建人</th><th>创建时间 ↓</th><th>更新时间</th><th style="min-width:90px;">对外开放</th><th style="min-width:180px;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>充值中心订单数</strong></td>
+          <td><span class="sql-preview" title="with a as( -- 取七日订单均...">with a as( -- 取七日订单均...</span></td>
+          <td>财务报表</td>
+          <td>数据仓库-立方_财务</td>
+          <td><span style="color:var(--primary)">吉云飞</span></td>
+          <td>2026-08-19 18:40</td>
+          <td>2026-09-02 17:47</td>
+          <td><span class="tag tag-success"><span class="dot"></span>已开放</span></td>
+          <td><div class="op-links">
+            <span class="op-link">编辑</span><span class="op-sep">|</span>
+            <span class="op-link" style="color:#059669;" onclick="showPage('key-manage')">Key管理</span><span class="op-sep">|</span>
+            <span class="op-link" onclick="showPage('call-log')">调用日志</span><span class="op-sep">|</span>
+            <span class="op-link danger">删除</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td><strong>套售军团运营总表</strong></td>
+          <td><span class="sql-preview">select log_date 日期, toda...</span></td>
+          <td>欢乐游戏人</td>
+          <td>阿里云_上海_国内</td>
+          <td><span style="color:var(--primary)">吉云飞</span></td>
+          <td>2026-06-28 17:02</td>
+          <td>2026-07-04 10:48</td>
+          <td><span class="tag tag-gray"><span class="dot"></span>未开放</span></td>
+          <td><div class="op-links">
+            <span class="op-link">编辑</span><span class="op-sep">|</span>
+            <span class="op-link" style="color:#059669;" onclick="showPage('create')">启用开放</span><span class="op-sep">|</span>
+            <span class="op-link danger">删除</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td><strong>迷雾三国总表-交叉表</strong></td>
+          <td><span class="sql-preview">select date(log_date) 日期...</span></td>
+          <td>迷雾三国</td>
+          <td>阿里云_上海_国内</td>
+          <td><span style="color:var(--primary)">吉云飞</span></td>
+          <td>2026-06-28 16:54</td>
+          <td>2026-06-28 16:56</td>
+          <td><span class="tag tag-gray"><span class="dot"></span>未开放</span></td>
+          <td><div class="op-links">
+            <span class="op-link">编辑</span><span class="op-sep">|</span>
+            <span class="op-link danger">删除</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td><strong>结算报表-海外</strong></td>
+          <td><span class="sql-preview">select date, channel, amt...</span></td>
+          <td>财务结算</td>
+          <td>数据仓库-立方_财务</td>
+          <td><span style="color:var(--primary)">吉云飞</span></td>
+          <td>2026-05-10 10:00</td>
+          <td>2026-05-10 10:00</td>
+          <td><span class="tag tag-success"><span class="dot"></span>已开放</span></td>
+          <td><div class="op-links">
+            <span class="op-link">编辑</span><span class="op-sep">|</span>
+            <span class="op-link" style="color:#059669;">Key管理</span><span class="op-sep">|</span>
+            <span class="op-link">调用日志</span><span class="op-sep">|</span>
+            <span class="op-link danger">删除</span>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="table-footer">
+      <span>共 4 条　20条/页</span>
+      <div class="pagination"><button>‹</button><button class="active">1</button><button>›</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE 2: 新建数据集 ========== -->
+<div id="page-create" class="page">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+    <span style="color:var(--primary);cursor:pointer;font-size:13px;" onclick="showPage('list')">← 返回列表</span>
+    <span style="color:var(--gray-400);">›</span>
+    <span class="page-title" style="margin:0;">新增数据集</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
+    <!-- 左侧 -->
+    <div>
+      <div class="section-block">
+        <div class="section-title">基础信息</div>
+        <div class="form-row-inline">
+          <div><label class="form-label">数据集名称<span class="req">*</span></label><input class="form-input" placeholder="请输入数据集名称"></div>
+          <div><label class="form-label">所属项目<span class="req">*</span></label><select class="form-select"><option>请选择</option><option>财务报表</option><option>欢乐游戏人</option><option>迷雾三国</option></select></div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">SQL 查询<span class="req">*</span></label>
+          <textarea class="form-textarea" style="height:100px;font-family:monospace;font-size:12px;">select log_date, sum(pay_amount) as total_amount, count(*) as order_cnt
+from finance_ads.pay_order_total
+where log_date >= date_sub(now(), interval 7 day)
+group by log_date</textarea>
+        </div>
+        <div class="form-row-inline">
+          <div><label class="form-label">连接源<span class="req">*</span></label><select class="form-select"><option>数据仓库-立方_财务</option><option>阿里云_上海</option></select></div>
+          <div><label class="form-label">数据库<span class="req">*</span></label><select class="form-select"><option>finance_ads</option><option>finance_dwd</option></select></div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-title">
+          <span>对外开放配置</span>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <span style="font-size:12px;color:var(--gray-600);">启用对外开放</span>
+            <div class="toggle on" id="toggleOpen" onclick="toggleOpenConfig()"></div>
+          </label>
+        </div>
+        <div id="openConfigArea">
+          <div class="form-row-inline">
+            <div>
+              <label class="form-label">单次返回上限<span class="req">*</span><span class="tip">（行）</span></label>
+              <input class="form-input" value="1000" type="number">
+              <div class="form-hint">建议不超过 10000 行</div>
+            </div>
+            <div>
+              <label class="form-label">日调用次数上限<span class="req">*</span><span class="tip">（每个Key）</span></label>
+              <input class="form-input" value="500" type="number">
+            </div>
+          </div>
+          <div class="form-row-inline">
+            <div>
+              <label class="form-label">并发限制<span class="req">*</span><span class="tip">（并行请求数）</span></label>
+              <input class="form-input" value="5" type="number">
+            </div>
+            <div>
+              <label class="form-label">缓存模式</label>
+              <select class="form-select">
+                <option value="realtime">实时查询（每次都执行SQL）</option>
+                <option value="daily">每日缓存（凌晨 2:00 刷新）</option>
+              </select>
+              <div class="form-hint">每日缓存可显著降低数据库压力</div>
+            </div>
+          </div>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;font-size:12px;color:#1e40af;margin-top:4px;">
+            ℹ️ 启用后管理员可在「Key 管理」页手动为指定用户生成 API Key，Key 持有者即可通过 <code>GET /v1/dataset/{id}/query</code> 调用该数据集。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧预览 -->
+    <div>
+      <div class="section-block">
+        <div class="section-title">API 调用预览</div>
+        <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;">保存后外部系统可通过以下方式调用：</div>
+        <div style="font-size:11px;color:var(--gray-600);margin-bottom:4px;">请求</div>
+        <div class="code-block" style="font-size:11px;line-height:1.6;">
+          <span class="kw">GET</span> /v1/dataset/<span class="str">{dataset_id}</span>/query<br>
+          <span class="hd">Authorization:</span> Bearer {your_key}<br>
+          <span class="hd">Content-Type:</span> application/json
+        </div>
+        <div style="font-size:11px;color:var(--gray-600);margin:10px 0 4px;">支持参数</div>
+        <div class="code-block" style="font-size:11px;line-height:1.6;">
+          ?limit=<span class="nu">100</span>     <span class="cm">// 返回行数，≤ 单次上限</span><br>
+          &offset=<span class="nu">0</span>    <span class="cm">// 分页偏移</span>
+        </div>
+        <div style="font-size:11px;color:var(--gray-600);margin:10px 0 4px;">返回示例</div>
+        <div class="code-block" style="font-size:11px;line-height:1.6;">
+          {<br>
+          &nbsp;&nbsp;<span class="kw">"code"</span>: <span class="nu">0</span>,<br>
+          &nbsp;&nbsp;<span class="kw">"data"</span>: {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"total"</span>: <span class="nu">7</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"rows"</span>: [<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="kw">"log_date"</span>:<span class="str">"2026-04-20"</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"total_amount"</span>:<span class="nu">128500</span>}<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;],<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"cached"</span>: <span class="str">false</span><br>
+          &nbsp;&nbsp;}<br>
+          }
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-default" style="flex:1;" onclick="showPage('list')">取消</button>
+        <button class="btn btn-primary" style="flex:2;" onclick="showPage('list');showToast('数据集已保存，对外开放已启用')">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE 3: Key 管理（管理员） ========== -->
+<div id="page-key-manage" class="page">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <span style="color:var(--primary);cursor:pointer;font-size:13px;" onclick="showPage('list')">← 返回列表</span>
+    <span style="color:var(--gray-400);">›</span>
+    <span class="page-title" style="margin:0;">Key 管理 — 充值中心订单数</span>
+  </div>
+
+  <div class="stat-cards">
+    <div class="stat-card"><div class="s-label">有效 Key</div><div class="s-value blue">3</div><div class="s-sub">当前活跃</div></div>
+    <div class="stat-card"><div class="s-label">今日调用总量</div><div class="s-value">1,248</div><div class="s-sub">较昨日 +12%</div></div>
+    <div class="stat-card"><div class="s-label">今日限流次数</div><div class="s-value red">7</div><div class="s-sub">触发 429</div></div>
+    <div class="stat-card"><div class="s-label">30天调用总量</div><div class="s-value green">32,840</div><div class="s-sub">上月 28,120</div></div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:600;">已授权 Key 列表</div>
+    <button class="btn btn-primary btn-sm" onclick="openGenKeyModal()">＋ 生成新 Key</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>持有人</th><th>所属部门</th><th>Key（脱敏）</th><th>生成时间</th><th>有效期至</th><th>状态</th><th>今日调用</th><th>剩余额度</th><th>操作</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>张三</strong></td>
+          <td>产品技术部</td>
+          <td><code>dk_live_a7f3...7f3a</code></td>
+          <td>2026-05-10</td>
+          <td>2026-11-10</td>
+          <td><span class="tag tag-success"><span class="dot"></span>有效</span></td>
+          <td>
+            <div style="font-size:12px;">342 / 500</div>
+            <div class="progress-bar" style="width:80px;margin-top:3px;"><div class="progress-fill" style="width:68%;"></div></div>
+          </td>
+          <td>158 次</td>
+          <td><div class="op-links">
+            <span class="op-link" onclick="openViewKeyModal('dk_live_a7f3c9e2b8d1047f3a9c2e8b1d047f3a','张三','2026-11-10',342,500)">查看Key</span><span class="op-sep">|</span>
+            <span class="op-link" onclick="showPage('call-log')">日志</span><span class="op-sep">|</span>
+            <span class="op-link danger" onclick="showToast('Key 已吊销，张三将无法继续调用')">吊销</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td><strong>王五</strong></td>
+          <td>数据产品部</td>
+          <td><code>dk_live_9c2e...3b8d</code></td>
+          <td>2026-05-15</td>
+          <td>2026-11-15</td>
+          <td><span class="tag tag-success"><span class="dot"></span>有效</span></td>
+          <td>
+            <div style="font-size:12px;">89 / 500</div>
+            <div class="progress-bar" style="width:80px;margin-top:3px;"><div class="progress-fill" style="width:18%;background:#22c55e;"></div></div>
+          </td>
+          <td>411 次</td>
+          <td><div class="op-links">
+            <span class="op-link" onclick="openViewKeyModal('dk_live_9c2eb8d1047f3a9c2e8b1d047f3a9c2e','王五','2026-11-15',89,500)">查看Key</span><span class="op-sep">|</span>
+            <span class="op-link" onclick="showPage('call-log')">日志</span><span class="op-sep">|</span>
+            <span class="op-link danger">吊销</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td><strong>李四</strong></td>
+          <td>海外运营部</td>
+          <td><code>dk_live_f047...a9c2</code></td>
+          <td>2026-05-20</td>
+          <td>2026-08-20</td>
+          <td><span class="tag tag-success"><span class="dot"></span>有效</span></td>
+          <td>
+            <div style="font-size:12px;">12 / 500</div>
+            <div class="progress-bar" style="width:80px;margin-top:3px;"><div class="progress-fill" style="width:2%;"></div></div>
+          </td>
+          <td>488 次</td>
+          <td><div class="op-links">
+            <span class="op-link" onclick="openViewKeyModal('dk_live_f047f3a9c2e8b1d047f3a9c2e8b1d047','李四','2026-08-20',12,500)">查看Key</span><span class="op-sep">|</span>
+            <span class="op-link">日志</span><span class="op-sep">|</span>
+            <span class="op-link danger">吊销</span>
+          </div></td>
+        </tr>
+        <tr style="opacity:.6;">
+          <td><strong>赵六</strong></td>
+          <td>运营部</td>
+          <td><code>dk_live_b1d0...e8b1</code></td>
+          <td>2025-10-01</td>
+          <td>2026-04-01</td>
+          <td><span class="tag tag-danger"><span class="dot"></span>已过期</span></td>
+          <td style="color:var(--gray-400);">— / 500</td>
+          <td style="color:var(--gray-400);">—</td>
+          <td><div class="op-links">
+            <span class="op-link">查看日志</span>
+          </div></td>
+        </tr>
+        <tr style="opacity:.6;">
+          <td><strong>孙七</strong></td>
+          <td>AI 研究部</td>
+          <td><code>—</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td><span class="tag tag-danger"><span class="dot"></span>已吊销</span></td>
+          <td style="color:var(--gray-400);">— / 500</td>
+          <td style="color:var(--gray-400);">—</td>
+          <td><div class="op-links">
+            <span class="op-link">查看日志</span>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="table-footer">
+      <span>共 5 条　20条/页</span>
+      <div class="pagination"><button>‹</button><button class="active">1</button><button>›</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE 4: 调用日志 ========== -->
+<div id="page-call-log" class="page">
+  <div class="page-title">调用日志</div>
+  <div class="log-filter">
+    <select class="select-sm" style="width:180px;"><option>充值中心订单数</option><option>结算报表-海外</option><option>全部数据集</option></select>
+    <select class="select-sm" style="width:140px;"><option>全部 Key 持有人</option><option>张三</option><option>王五</option><option>李四</option></select>
+    <select class="select-sm"><option>全部状态</option><option>成功 200</option><option>鉴权失败 401</option><option>无权限 403</option><option>限流 429</option><option>错误 500</option></select>
+    <input class="input-sm" type="date" value="2026-05-20" style="width:135px;">
+    <span style="color:var(--gray-400);font-size:12px;">—</span>
+    <input class="input-sm" type="date" value="2026-05-20" style="width:135px;">
+    <button class="btn btn-primary btn-sm">查询</button>
+    <button class="btn btn-default btn-sm">↓ 导出</button>
+  </div>
+
+  <div class="stat-cards" style="grid-template-columns:repeat(4,1fr);">
+    <div class="stat-card"><div class="s-label">今日总调用</div><div class="s-value blue">1,248</div><div class="s-sub">较昨日 +12%</div></div>
+    <div class="stat-card"><div class="s-label">成功率</div><div class="s-value green">99.4%</div><div class="s-sub">7次限流，0次错误</div></div>
+    <div class="stat-card"><div class="s-label">平均响应时间</div><div class="s-value">138<span style="font-size:13px;font-weight:400;"> ms</span></div><div class="s-sub">实时查询模式</div></div>
+    <div class="stat-card"><div class="s-label">今日限流次数</div><div class="s-value red">7</div><div class="s-sub">触发 429</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>时间</th><th>数据集</th><th>Key 持有人</th><th>IP</th><th>参数</th><th>状态码</th><th>响应时间</th><th>返回行数</th><th>缓存命中</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:42:33</td>
+          <td>充值中心订单数</td>
+          <td>张三</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.1.42</td>
+          <td style="font-size:11px;"><code>limit=100&offset=0</code></td>
+          <td><span class="log-status-ok">200</span></td>
+          <td>142ms</td>
+          <td>7</td>
+          <td><span class="tag tag-gray">否</span></td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:39:11</td>
+          <td>充值中心订单数</td>
+          <td>王五</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.2.18</td>
+          <td style="font-size:11px;"><code>limit=50&offset=0</code></td>
+          <td><span class="log-status-ok">200</span></td>
+          <td>98ms</td>
+          <td>7</td>
+          <td><span class="tag tag-success">是</span></td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:35:02</td>
+          <td>充值中心订单数</td>
+          <td>张三</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.1.42</td>
+          <td style="font-size:11px;"><code>limit=100</code></td>
+          <td><span class="log-status-limit">429</span></td>
+          <td>8ms</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:30:55</td>
+          <td>结算报表-海外</td>
+          <td>李四</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.3.7</td>
+          <td style="font-size:11px;"><code>limit=200</code></td>
+          <td><span class="log-status-ok">200</span></td>
+          <td>203ms</td>
+          <td>42</td>
+          <td><span class="tag tag-gray">否</span></td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:22:18</td>
+          <td>充值中心订单数</td>
+          <td>—</td>
+          <td style="color:var(--gray-600);font-size:11px;">1.2.3.4</td>
+          <td style="font-size:11px;">—</td>
+          <td><span class="log-status-err">401</span></td>
+          <td>3ms</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:18:44</td>
+          <td>充值中心订单数</td>
+          <td>王五</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.2.18</td>
+          <td style="font-size:11px;"><code>limit=100</code></td>
+          <td><span class="log-status-ok">200</span></td>
+          <td>115ms</td>
+          <td>7</td>
+          <td><span class="tag tag-success">是</span></td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:10:07</td>
+          <td>结算报表-海外</td>
+          <td>李四</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.3.7</td>
+          <td style="font-size:11px;"><code>limit=100</code></td>
+          <td><span class="log-status-ok">200</span></td>
+          <td>188ms</td>
+          <td>42</td>
+          <td><span class="tag tag-gray">否</span></td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap;">2026-05-20 17:05:33</td>
+          <td>充值中心订单数</td>
+          <td>李四</td>
+          <td style="color:var(--gray-600);font-size:11px;">10.0.3.7</td>
+          <td style="font-size:11px;"><code>limit=100</code></td>
+          <td><span class="log-status-err">403</span></td>
+          <td>4ms</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="table-footer">
+      <span>共 1,248 条　20条/页</span>
+      <div class="pagination"><button>‹</button><button class="active">1</button><button>2</button><button>3</button><button>…</button><button>63</button><button>›</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE 5: API 文档 ========== -->
+<div id="page-api-doc" class="page">
+  <div class="page-title">API 接入文档</div>
+
+  <div class="doc-section">
+    <h3>📌 概述</h3>
+    <p style="font-size:12px;color:var(--gray-600);line-height:1.8;">
+      数据集开放 API 允许持有有效 Key 的系统通过标准 HTTP 接口查询指定数据集的数据。<br>
+      API 部署在内网，调用方须在内网或 VPN 环境下访问。
+    </p>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 14px;font-size:12px;color:#0369a1;">
+        🌐 Base URL：<code style="background:transparent;color:#0369a1;">https://data-api.987ht.net</code>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 14px;font-size:12px;color:#166534;">
+        🔒 仅限内网 / VPN 访问
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h3>🔑 鉴权方式</h3>
+    <p style="font-size:12px;color:var(--gray-600);margin-bottom:10px;">所有请求须在 Header 中携带 <code>Authorization</code>，格式为 Bearer Token：</p>
+    <div class="code-block">
+      <span class="hd">Authorization:</span> Bearer dk_live_a7f3c9e2b8d1047f3a9c2e8b1d047f3a
+    </div>
+    <div style="margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;font-size:12px;color:#92400e;">
+      ⚠️ Key 由管理员手动生成，请联系数据平台管理员申请。Key 泄露请立即联系管理员吊销。
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h3>📥 查询接口</h3>
+    <div class="code-block">
+      <span class="kw">GET</span> /v1/dataset/<span class="str">{dataset_id}</span>/query
+    </div>
+    <h4>请求参数</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>参数</th><th>位置</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>dataset_id</code></td><td>Path</td><td>string</td><td>是</td><td>数据集唯一标识，可在数据集列表查看</td></tr>
+          <tr><td><code>limit</code></td><td>Query</td><td>integer</td><td>否</td><td>返回行数，默认 100，不超过数据集配置的单次上限</td></tr>
+          <tr><td><code>offset</code></td><td>Query</td><td>integer</td><td>否</td><td>分页偏移量，默认 0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h4>完整请求示例</h4>
+    <div class="code-block">
+      curl -X <span class="kw">GET</span> \<br>
+      &nbsp;&nbsp;<span class="str">"https://data-api.987ht.net/v1/dataset/ds_charge_order/query?limit=100&offset=0"</span> \<br>
+      &nbsp;&nbsp;-H <span class="str">"Authorization: Bearer dk_live_a7f3c9e2b8d1047..."</span> \<br>
+      &nbsp;&nbsp;-H <span class="str">"Content-Type: application/json"</span>
+    </div>
+    <h4>返回格式</h4>
+    <div class="code-block">
+      {<br>
+      &nbsp;&nbsp;<span class="kw">"code"</span>: <span class="nu">0</span>,          <span class="cm">// 0=成功，非0=失败</span><br>
+      &nbsp;&nbsp;<span class="kw">"msg"</span>: <span class="str">"ok"</span>,<br>
+      &nbsp;&nbsp;<span class="kw">"data"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"total"</span>: <span class="nu">7</span>,       <span class="cm">// 本次返回行数</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"rows"</span>: [          <span class="cm">// 数据行（对象数组）</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="kw">"log_date"</span>: <span class="str">"2026-04-20"</span>, <span class="kw">"total_amount"</span>: <span class="nu">128500.00</span>},<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;],<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"cached"</span>: <span class="str">false</span>,   <span class="cm">// 是否命中缓存</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">"cached_at"</span>: <span class="str">null</span>  <span class="cm">// 缓存生成时间（每日缓存模式有值）</span><br>
+      &nbsp;&nbsp;}<br>
+      }
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h3>⚠️ 错误码说明</h3>
+    <div class="table-wrap">
+      <table class="err-table">
+        <thead><tr><th>HTTP 状态码</th><th>code</th><th>含义</th><th>处理建议</th></tr></thead>
+        <tbody>
+          <tr><td class="err-200">200</td><td>0</td><td>成功</td><td>—</td></tr>
+          <tr><td class="err-401">401</td><td>10001</td><td>未提供 Token 或 Token 格式错误</td><td>检查 Authorization Header 格式</td></tr>
+          <tr><td class="err-401">401</td><td>10002</td><td>Token 无效或已过期</td><td>联系管理员重新生成 Key</td></tr>
+          <tr><td class="err-401">401</td><td>10003</td><td>Token 已被吊销</td><td>联系管理员</td></tr>
+          <tr><td class="err-403">403</td><td>10004</td><td>该 Key 无权访问此数据集</td><td>确认 dataset_id 与 Key 的授权数据集一致</td></tr>
+          <tr><td class="err-429">429</td><td>10005</td><td>超出并发限制</td><td>稍后重试，或联系管理员提升并发数</td></tr>
+          <tr><td class="err-429">429</td><td>10006</td><td>超出今日调用次数上限</td><td>等次日重置，或联系管理员提升日限额</td></tr>
+          <tr><td class="err-500">500</td><td>20001</td><td>数据库查询异常</td><td>重试，持续报错请联系数据平台</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h3>📋 限流规则</h3>
+    <div style="font-size:12px;color:var(--gray-600);line-height:2;">
+      • <strong>并发限制</strong>：每个数据集有最大并发请求数限制（由管理员配置），超出时返回 429（code 10005）<br>
+      • <strong>日调用限额</strong>：每个 Key 每天有调用次数上限（由管理员配置），次日 0:00 自动重置<br>
+      • <strong>重试建议</strong>：收到 429 后建议等待 1 秒后重试，避免突发大量重试加重压力
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h3>💾 缓存模式说明</h3>
+    <div style="font-size:12px;color:var(--gray-600);line-height:2;">
+      数据集支持两种缓存模式：<br>
+      • <strong>实时查询（默认）</strong>：每次请求都执行 SQL，数据最新，但对数据库压力较大<br>
+      • <strong>每日缓存</strong>：每天凌晨 2:00 自动执行 SQL 并将结果缓存为文件，日间请求直接读缓存；返回值 <code>cached: true</code>，<code>cached_at</code> 为缓存生成时间
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- Modal: 生成 Key -->
+<div class="modal-overlay" id="genKeyModal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">生成 API Key</div>
+      <button class="modal-close" onclick="closeGenKeyModal()">×</button>
+    </div>
+    <div class="modal-body" id="genKeyBody">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:14px;">为指定用户生成该数据集的 API Key，Key 生成后请通过安全渠道告知持有人。</div>
+      <div class="form-row">
+        <label class="form-label">数据集</label>
+        <input class="form-input" value="充值中心订单数" readonly style="background:#f8f9fa;color:var(--gray-600);">
+      </div>
+      <div class="form-row-inline">
+        <div>
+          <label class="form-label">持有人姓名<span class="req">*</span></label>
+          <input class="form-input" id="keyHolder" placeholder="请输入姓名">
+        </div>
+        <div>
+          <label class="form-label">所属部门</label>
+          <input class="form-input" id="keyDept" placeholder="请输入部门">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">有效期<span class="req">*</span></label>
+        <select class="form-select">
+          <option>3个月</option><option selected>6个月</option><option>1年</option><option>永久</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">备注</label>
+        <input class="form-input" placeholder="用途说明（可选）">
+      </div>
+    </div>
+    <div class="modal-footer" id="genKeyFooter">
+      <button class="btn btn-default" onclick="closeGenKeyModal()">取消</button>
+      <button class="btn btn-primary" onclick="doGenKey()">生成 Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: 查看 Key -->
+<div class="modal-overlay" id="viewKeyModal">
+  <div class="modal" style="width:460px;">
+    <div class="modal-header">
+      <div class="modal-title" id="viewKeyTitle">查看 Key</div>
+      <button class="modal-close" onclick="document.getElementById('viewKeyModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Key</label>
+        <div class="token-display" id="viewKeyValue">
+          dk_live_a7f3c9e2b8d1047f3a9c2e8b1d047f3a
+          <span class="copy-btn" onclick="showToast('已复制到剪贴板')">复制</span>
+        </div>
+        <div class="form-hint">⚠️ 请通过安全渠道（飞书私聊/加密邮件）将 Key 发送给持有人，勿在群聊中传递</div>
+      </div>
+      <div class="form-row-inline">
+        <div><label class="form-label">持有人</label><div id="viewKeyHolder" style="font-size:13px;font-weight:500;margin-top:4px;">张三</div></div>
+        <div><label class="form-label">有效期至</label><div id="viewKeyExpiry" style="font-size:13px;font-weight:500;margin-top:4px;">2026-11-10</div></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">今日调用情况</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <div style="flex:1;"><div class="progress-bar" style="height:8px;"><div class="progress-fill" id="viewKeyProgress" style="width:68%;"></div></div></div>
+          <span style="font-size:12px;color:var(--gray-600);" id="viewKeyUsage">342 / 500 次</span>
+        </div>
+      </div>
+      <div style="background:#f0f2f5;border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:var(--gray-800);margin-top:4px;line-height:1.7;">
+        <span style="color:var(--gray-600);">// 调用示例</span><br>
+        curl -X GET \<br>
+        &nbsp;&nbsp;"https://data-api.987ht.net/v1/dataset/ds_001/query" \<br>
+        &nbsp;&nbsp;-H "Authorization: Bearer dk_live_a7f3..."
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="showToast('Key 已吊销');document.getElementById('viewKeyModal').classList.remove('show')">吊销此 Key</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-default" onclick="document.getElementById('viewKeyModal').classList.remove('show')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ <span id="toast-msg"></span></div>
+
+<script>
+const pageTitles = {
+  'list': '数据集列表',
+  'create': '新建数据集',
+  'key-manage': 'Key 管理',
+  'call-log': '调用日志',
+  'api-doc': 'API 文档'
+};
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page-nav button').forEach((b, i) => {
+    const map = { list:0, create:1, 'key-manage':2, 'call-log':3, 'api-doc':4 };
+    b.classList.toggle('active', i === map[name]);
+  });
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('topbar-title').textContent = pageTitles[name] || name;
+}
+
+function toggleOpenConfig() {
+  const tog = document.getElementById('toggleOpen');
+  tog.classList.toggle('on');
+  const area = document.getElementById('openConfigArea');
+  area.style.opacity = tog.classList.contains('on') ? '1' : '0.4';
+  area.style.pointerEvents = tog.classList.contains('on') ? '' : 'none';
+}
+
+function openGenKeyModal() {
+  document.getElementById('keyHolder').value = '';
+  document.getElementById('keyDept').value = '';
+  document.getElementById('genKeyModal').classList.add('show');
+}
+
+function closeGenKeyModal() {
+  document.getElementById('genKeyModal').classList.remove('show');
+}
+
+function doGenKey() {
+  const holder = document.getElementById('keyHolder').value.trim();
+  if (!holder) { showToast('请填写持有人姓名'); return; }
+  const key = 'dk_live_' + Math.random().toString(36).substr(2,8) + Math.random().toString(36).substr(2,8);
+  document.getElementById('genKeyBody').innerHTML = `
+    <div style="text-align:center;padding:8px 0 16px;">
+      <div style="font-size:28px;margin-bottom:8px;">✅</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Key 已成功生成</div>
+      <div style="font-size:12px;color:var(--gray-600);">请通过安全渠道发送给 ${holder}</div>
+    </div>
+    <div style="font-size:12px;font-weight:500;margin-bottom:5px;">API Key</div>
+    <div class="token-display" style="word-break:break-all;">${key}<span class="copy-btn" onclick="showToast('已复制')">复制</span></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--gray-400);">⚠️ 此 Key 仅显示一次，关闭后无法再次查看，请确保已告知持有人。</div>
+  `;
+  document.getElementById('genKeyFooter').innerHTML = `<button class="btn btn-primary" onclick="closeGenKeyModal();showPage('key-manage')">完成</button>`;
+}
+
+function openViewKeyModal(key, holder, expiry, used, limit) {
+  document.getElementById('viewKeyTitle').textContent = '查看 Key — ' + holder;
+  document.getElementById('viewKeyValue').innerHTML = key + '<span class="copy-btn" onclick="showToast(\'已复制\')">复制</span>';
+  document.getElementById('viewKeyHolder').textContent = holder;
+  document.getElementById('viewKeyExpiry').textContent = expiry;
+  document.getElementById('viewKeyUsage').textContent = used + ' / ' + limit + ' 次';
+  document.getElementById('viewKeyProgress').style.width = Math.round(used/limit*100) + '%';
+  document.getElementById('viewKeyModal').classList.add('show');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+<div style="text-align:center;padding:8px;font-size:11px;color:#adb5bd;background:#fff;border-top:1px solid var(--gray-200);">数据集开放 API · 一期原型 · Generated by 小D</div>
+</body>
+</html>
